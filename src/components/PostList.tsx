@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Post, useGetPostsQuery } from "../api/index";
 
@@ -6,57 +6,43 @@ function PostList() {
   const [page, setPage] = useState(0);
   const [posts, setPosts] = useState<Post[]>([]);
   const { data: newPosts, isLoading, isFetching } = useGetPostsQuery(page);
-  const [hasMore, setHasMore] = useState(true);
-  const observer = useRef<IntersectionObserver | null>(null);
-  const loader = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
 
   const fetchData = async () => {
-    if (!hasMore) {
-      return;
-    }
-
     setPage((prevPage) => prevPage + 1);
   };
 
   useEffect(() => {
     if (newPosts) {
-      setPosts((prevPosts) => {
-        const filteredNewPosts = newPosts.filter(
-          (newPost) => !prevPosts.some((prevPost) => prevPost.id === newPost.id)
-        );
-        return prevPosts.concat(filteredNewPosts);
-      });
+      setPosts((prevPosts) => [...prevPosts, ...newPosts]);
     }
-  }, [newPosts, isLoading, isFetching]);
+  }, [newPosts, isFetching]);
 
   useEffect(() => {
-    observer.current = new IntersectionObserver((entries) => {
-      const target = entries[0];
-      if (target.isIntersecting) {
+    const handleScroll = () => {
+      const isAtBottom =
+        window.innerHeight + window.scrollY >= document.body.offsetHeight;
+
+      if (isAtBottom && !isFetching) {
         fetchData();
       }
-    });
+    };
 
-    if (loader.current) {
-      observer.current.observe(loader.current);
-    }
+    window.addEventListener("scroll", handleScroll);
 
     return () => {
-      if (loader.current && observer.current) {
-        observer.current.disconnect();
-      }
+      window.removeEventListener("scroll", handleScroll);
     };
-  }, [hasMore]);
+  }, [isFetching]);
 
   return (
     <div>
       {isLoading ? (
         <p>Loading...</p>
       ) : (
-        posts?.map((post) => (
-          <div key={post.id}>
-            <h2>{post.id + "." + " " + post.title}</h2>
+        posts?.map((post, index) => (
+          <div key={index}>
+            <h2>{index + 1 + "." + " " + post.title}</h2>
             <p>{post.body.substring(0, 100)}...</p>
             <button
               style={{
@@ -66,7 +52,7 @@ function PostList() {
                 cursor: "pointer",
               }}
               onClick={() => {
-                navigate(`/post/${post.id}`);
+                navigate(`/post/${index + 1}`);
               }}
             >
               View
@@ -75,8 +61,7 @@ function PostList() {
           </div>
         ))
       )}
-      <div ref={loader} style={{ height: "10px" }}></div>
-      {!hasMore && <p>No more posts</p>}
+      {isFetching && <p>Loading more...</p>}
     </div>
   );
 }
