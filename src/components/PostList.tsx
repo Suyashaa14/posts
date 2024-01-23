@@ -2,14 +2,16 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Post, useGetPostsQuery } from "../api/index";
 
+const PAGE_LIMIT = 10;
+
 function PostList() {
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(1);
   const [posts, setPosts] = useState<Post[]>([]);
   const { data: newPosts, isLoading, isFetching } = useGetPostsQuery(page);
   const navigate = useNavigate();
 
   const fetchData = async () => {
-    setPage((prevPage) => prevPage + 1);
+    setPage((prevPage) => (prevPage >= PAGE_LIMIT ? 1 : prevPage + 1));
   };
 
   useEffect(() => {
@@ -52,7 +54,7 @@ function PostList() {
                 cursor: "pointer",
               }}
               onClick={() => {
-                navigate(`/post/${index + 1}`);
+                navigate(`/post/${post.id}`);
               }}
             >
               View
